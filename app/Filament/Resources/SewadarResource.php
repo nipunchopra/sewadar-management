@@ -39,13 +39,38 @@ class SewadarResource extends Resource
 
                 Section::make()
                     ->schema([
-                        Select::make('area_id')->label('Area')
-                            ->options(fn () => Area::limit(5)->get(['name', 'id'])->pluck('name', 'id')->toArray())->native(false)
-                            ->getSearchResultsUsing(fn (string $search): array => Area::where('name', 'like', "%{$search}%")->limit(10)->pluck('name', 'id')->toArray()),
-
                         Select::make('group_id')->label('Group')->searchable()
-                            ->options(fn () => Group::limit(5)->get(['name', 'id'])->pluck('name', 'id')->toArray())->native(false)
-                            ->getSearchResultsUsing(fn (string $search): array => Group::where('name', 'like', "%{$search}%")->limit(10)->pluck('name', 'id')->toArray())
+                            ->options(function () {
+                                $sewadar = [];
+
+                                $groups = Group::with('sewadar')->limit(5)->get();
+
+                                foreach ($groups as $group) {
+                                    $name = $group->sewadar->first_name . ' ' . $group->sewadar->last_name . ' (' . $group->sewadar->badge_number . ')';
+                                    $id = $group->id;
+                                    $sewadar[$id] = $name;
+                                }
+                                return $sewadar;
+
+                            })->native(false)
+                            ->getSearchResultsUsing(function ($search) {
+                                $sewadar = [];
+
+                                $groups = Group::with([
+                                    'sewadar' => function ($q) use ($search) {
+                                        return $q->where('first_name', 'like', "%{$search}%")->orWhere('last_name', 'like', "%{$search}%")->orWhere('badge_number', 'like', "%{$search}%");
+                                    }
+                                ])->whereHas('sewadar', function ($q) use ($search) {
+                                    return $q->where('first_name', 'like', "%{$search}%")->orWhere('last_name', 'like', "%{$search}%")->orWhere('badge_number', 'like', "%{$search}%");
+                                })->limit(5)->get();
+
+                                foreach ($groups as $group) {
+                                    $name = $group->sewadar->first_name . ' ' . $group->sewadar->last_name . ' (' . $group->sewadar->badge_number . ')';
+                                    $id = $group->id;
+                                    $sewadar[$id] = $name;
+                                }
+                                return $sewadar;
+                            })
                     ])->columns(3),
 
 
@@ -101,17 +126,17 @@ class SewadarResource extends Resource
                     Toggle::make('address_at_time_of_naamdan_same_as_present')
                         ->label('Same as present address')->default(true)->reactive(),
 
-                    TextInput::make('address_at_time_of_naamdan')->visible(fn ($get) => !$get('address_at_time_of_naamdan_same_as_present'))
+                    TextInput::make('address_at_time_of_naamdan')->visible(fn($get) => !$get('address_at_time_of_naamdan_same_as_present'))
                         ->columnSpan(2),
-                ])->columns(3)->hidden(fn ($get) => !$get('naamdan')),
+                ])->columns(3)->hidden(fn($get) => !$get('naamdan')),
 
                 Fieldset::make('Permissions')->schema([
                     Toggle::make('mobile_permission')->default(false),
                     Toggle::make('car_permission')->reactive()->default(false)->columnSpan(2),
 
-                    TextInput::make('car_number')->hidden(fn ($get) => !$get('car_permission')),
-                    TextInput::make('car_name')->hidden(fn ($get) => !$get('car_permission')),
-                    TextInput::make('car_seats')->hidden(fn ($get) => !$get('car_permission')),
+                    TextInput::make('car_number')->hidden(fn($get) => !$get('car_permission')),
+                    TextInput::make('car_name')->hidden(fn($get) => !$get('car_permission')),
+                    TextInput::make('car_seats')->hidden(fn($get) => !$get('car_permission')),
                 ])->columns(3)
             ]);
     }
@@ -126,8 +151,8 @@ class SewadarResource extends Resource
                 TextColumn::make('first_name')->searchable()->sortable(),
                 TextColumn::make('last_name')->searchable()->sortable(),
                 TextColumn::make('father_name')->searchable()->sortable(),
-                TextColumn::make('area.name')->searchable()->sortable()->label('Area'),
-                TextColumn::make('group.name')->searchable()->sortable()->label('Group'),
+                TextColumn::make('group.area.name')->searchable()->sortable()->label('Area'),
+                TextColumn::make('group')->searchable()->getStateUsing(fn($record) => "{$record->group->sewadar->first_name} {$record->group->sewadar->last_name} ({$record->group->sewadar->badge_number})")->sortable()->label('Group'),
             ])
             ->filters([
                 //

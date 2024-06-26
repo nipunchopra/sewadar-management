@@ -5,22 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Group extends Model
+class ListInCharge extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'area_id',
+        'group_id',
         'sewadar_id',
     ];
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
 
     public function sewadar()
     {
         return $this->belongsTo(Sewadar::class);
-    }
-
-    public function area()
-    {
-        return $this->belongsTo(Area::class);
     }
 }

@@ -2,25 +2,23 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\GroupResource\Pages;
-use App\Filament\Resources\GroupResource\RelationManagers;
-use App\Models\Area;
+use App\Filament\Resources\ListInChargeResource\Pages;
+use App\Filament\Resources\ListInChargeResource\RelationManagers;
 use App\Models\Group;
+use App\Models\ListInCharge;
 use App\Models\Sewadar;
 use Filament\Forms;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class GroupResource extends Resource
+class ListInChargeResource extends Resource
 {
-    protected static ?string $model = Group::class;
+    protected static ?string $model = ListInCharge::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -28,11 +26,40 @@ class GroupResource extends Resource
     {
         return $form
             ->schema([
-                Select::make('area_id')->label('Area')
-                    ->searchable()
+                Select::make('group_id')->label('Group')->searchable()
+                    ->options(function () {
+                        $sewadar = [];
 
-                    ->options(fn() => Area::limit(5)->get(['name', 'id'])->pluck('name', 'id')->toArray())->native(false)
-                    ->getSearchResultsUsing(fn(string $search): array => Area::where('name', 'like', "%{$search}%")->limit(10)->pluck('name', 'id')->toArray())->required(),
+                        $groups = Group::with('sewadar')->limit(5)->get();
+
+                        foreach ($groups as $group) {
+                            $name = $group->sewadar->first_name . ' ' . $group->sewadar->last_name . ' (' . $group->sewadar->badge_number . ')';
+                            $id = $group->id;
+                            $sewadar[$id] = $name;
+                        }
+                        return $sewadar;
+
+                    })->native(false)
+                    ->getSearchResultsUsing(function ($search) {
+                        $sewadar = [];
+
+                        $groups = Group::with([
+                            'sewadar' => function ($q) use ($search) {
+                                return $q->where('first_name', 'like', "%{$search}%")->orWhere('last_name', 'like', "%{$search}%")->orWhere('badge_number', 'like', "%{$search}%");
+                            }
+                        ])->whereHas('sewadar', function ($q) use ($search) {
+                            return $q->where('first_name', 'like', "%{$search}%")->orWhere('last_name', 'like', "%{$search}%")->orWhere('badge_number', 'like', "%{$search}%");
+                        })->limit(5)->get();
+
+                        foreach ($groups as $group) {
+                            $name = $group->sewadar->first_name . ' ' . $group->sewadar->last_name . ' (' . $group->sewadar->badge_number . ')';
+                            $id = $group->id;
+                            $sewadar[$id] = $name;
+                        }
+                        return $sewadar;
+                    }),
+
+
                 Select::make('sewadar_id')->label('Sewadar')
                     ->searchable()
                     ->options(function () {
@@ -66,16 +93,13 @@ class GroupResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')->sortable(),
-                TextColumn::make('area.name')->sortable(),
-                TextColumn::make('sewadar.first_name')->searchable()->getStateUsing(fn($record) => $record->sewadar->first_name . " " . $record->sewadar->last_name . " ({$record->sewadar->badge_number})")->sortable(),
+                //
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -97,9 +121,9 @@ class GroupResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListGroups::route('/'),
-            'create' => Pages\CreateGroup::route('/create'),
-            'edit' => Pages\EditGroup::route('/{record}/edit'),
+            'index' => Pages\ListListInCharges::route('/'),
+            'create' => Pages\CreateListInCharge::route('/create'),
+            'edit' => Pages\EditListInCharge::route('/{record}/edit'),
         ];
     }
 }

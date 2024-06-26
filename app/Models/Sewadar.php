@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sewadar extends Model
 {
+    use SoftDeletes;
 
     protected $fillable = [
         'area_id',
@@ -36,13 +38,10 @@ class Sewadar extends Model
         'car_seats',
     ];
 
-    public function area()
-    {
-        return $this->belongsTo(Area::class);
-    }
-
     public function group()
     {
         return $this->belongsTo(Group::class);
     }
+
+
 }

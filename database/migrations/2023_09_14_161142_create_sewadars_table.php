@@ -14,11 +14,11 @@ return new class extends Migration
         Schema::create('sewadars', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('area_id')->constrained('areas');
-            $table->foreignId('group_id')->constrained('groups');
+            $table->foreignId('group_id')->constrained('groups')->nullable();
+            $table->foreignId('list_in_charge_id')->constrained('list_in_charges')->nullable();
 
             $table->string('badge_number');
-            $table->string('photo');
+            $table->string('photo')->nullable();
             $table->string('first_name');
             $table->string('last_name');
             $table->string('father_name');
@@ -50,6 +50,8 @@ return new class extends Migration
             $table->string('car_name')->nullable();
             $table->integer('car_seats')->nullable();
 
+            $table->text('reason_of_deletion')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }
